@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import { makeFleetId } from '../../../domain/object-values/fleet-id';
 import { makePlateNumber } from '../../../domain/object-values/plate-number';
 import { makeUserId } from '../../../domain/object-values/user-id';
@@ -39,6 +40,47 @@ describe('SQLiteFleetDatabase', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('constructor (directory creation)', () => {
+    it('should create database directory when using file-backed path and directory is missing', () => {
+      const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+      const mkdirSpy = jest
+        .spyOn(fs, 'mkdirSync')
+        .mockImplementation(
+          (_path: fs.PathLike, _options?: fs.Mode | fs.MakeDirectoryOptions | null) => {
+            return undefined;
+          }
+        );
+
+      const fileBackedPath = './tmp-data/fleets.db';
+      new SQLiteFleetDatabase(fileBackedPath);
+
+      expect(existsSpy).toHaveBeenCalledWith('./tmp-data');
+      expect(mkdirSpy).toHaveBeenCalledWith('./tmp-data', { recursive: true });
+
+      existsSpy.mockRestore();
+      mkdirSpy.mockRestore();
+    });
+
+    it('should not create database directory when it already exists', () => {
+      const existsSpy = jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+      const mkdirSpy = jest
+        .spyOn(fs, 'mkdirSync')
+        .mockImplementation(
+          (_path: fs.PathLike, _options?: fs.Mode | fs.MakeDirectoryOptions | null) => {
+            return undefined;
+          }
+        );
+
+      new SQLiteFleetDatabase('./data/fleets.db');
+
+      expect(existsSpy).toHaveBeenCalled();
+      expect(mkdirSpy).not.toHaveBeenCalled();
+
+      existsSpy.mockRestore();
+      mkdirSpy.mockRestore();
+    });
   });
 
   describe('upsertFleet', () => {
